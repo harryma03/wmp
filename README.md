@@ -22,6 +22,11 @@ Code for the paper:
     - `pip install opencv-contrib-python`
     - `pip install -r requirements.txt`
 
+pip uninstall -y opencv-python opencv-contrib-python
+pip install opencv-contrib-python==4.6.0.66
+
+python -c "import isaacgym; import torch; import cv2; import ruamel.yaml; import legged_gym; import rsl_rl; print('isaacgym:', isaacgym.__file__); print('torch:', torch.__version__); print('cv2:', cv2.__version__); print('cuda:', torch.cuda.is_available(), torch.cuda.device_count()); print('WMP imports OK')"
+
 ## Training
 ```
 python legged_gym/scripts/train.py --task=a1_amp --headless --sim_device=cuda:0

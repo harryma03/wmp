@@ -68,7 +68,6 @@ def play(args):
 
     env_cfg.domain_rand.randomize_action_latency = False
     env_cfg.domain_rand.push_robots = False
-    env_cfg.domain_rand.randomize_gains = True
     # env_cfg.domain_rand.randomize_base_mass = False
     env_cfg.domain_rand.randomize_link_mass = False
     # env_cfg.domain_rand.randomize_com_pos = False

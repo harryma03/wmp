@@ -39,6 +39,8 @@ import statistics
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 import torch
+import inspect
+import shutil
 
 from rsl_rl.algorithms import AMPPPO, PPO
 from rsl_rl.modules import ActorCritic, ActorCriticWMP, ActorCriticRecurrent
@@ -90,7 +92,11 @@ class WMPRunner:
         self._build_world_model()
 
         # build depth predictor
-        self.depth_predictor = DepthPredictor().to(self._world_model.device)
+        self.depth_predictor = DepthPredictor(
+            forward_heightamp_dim=self.env.cfg.env.forward_height_dim,
+            prop_dim=self.env.cfg.env.prop_dim,
+            depth_image_dims=self.env.cfg.depth.resized,
+        ).to(self._world_model.device)
         self.depth_predictor_opt = optim.Adam(self.depth_predictor.parameters(), lr=self.depth_predictor_cfg["lr"],
                                               weight_decay=self.depth_predictor_cfg["weight_decay"])
 
@@ -104,24 +110,27 @@ class WMPRunner:
                                           wm_feature_dim=self.wm_feature_dim,
                                           **self.policy_cfg).to(self.device)
 
-        amp_data = AMPLoader(
-            device, time_between_frames=self.env.dt, preload_transitions=True,
-            num_preload_transitions=train_cfg['runner']['amp_num_preload_transitions'],
-            motion_files=self.cfg["amp_motion_files"])
-        amp_normalizer = Normalizer(amp_data.observation_dim)
-        discriminator = AMPDiscriminator(
-            amp_data.observation_dim * 2,
-            train_cfg['runner']['amp_reward_coef'],
-            train_cfg['runner']['amp_discr_hidden_dims'], device,
-            train_cfg['runner']['amp_task_reward_lerp']).to(self.device)
+        self.use_amp = self.cfg.get("use_amp", True)
+        amp_data = amp_normalizer = discriminator = None
+        if self.use_amp:
+            amp_data = AMPLoader(
+                device, time_between_frames=self.env.dt, preload_transitions=True,
+                num_preload_transitions=train_cfg['runner']['amp_num_preload_transitions'],
+                motion_files=self.cfg["amp_motion_files"])
+            amp_normalizer = Normalizer(amp_data.observation_dim)
+            discriminator = AMPDiscriminator(
+                amp_data.observation_dim * 2,
+                train_cfg['runner']['amp_reward_coef'],
+                train_cfg['runner']['amp_discr_hidden_dims'], device,
+                train_cfg['runner']['amp_task_reward_lerp']).to(self.device)
 
         # self.discr: AMPDiscriminator = AMPDiscriminator()
         alg_class = eval(self.cfg["algorithm_class_name"])  # PPO
-        min_std = (
-                torch.tensor(self.cfg["min_normalized_std"], device=self.device) *
-                (torch.abs(self.env.dof_pos_limits[:, 1] - self.env.dof_pos_limits[:, 0])))
+        min_std = torch.tensor(self.cfg["min_normalized_std"], device=self.device)
+        if not self.cfg.get("min_std_is_absolute", False):
+            min_std *= torch.abs(self.env.dof_pos_limits[:, 1] - self.env.dof_pos_limits[:, 0])
         self.alg: PPO = alg_class(actor_critic, discriminator, amp_data, amp_normalizer, device=self.device,
-                                  min_std=min_std, **self.alg_cfg)
+                                  min_std=min_std, use_amp=self.use_amp, **self.alg_cfg)
         self.num_steps_per_env = self.cfg["num_steps_per_env"]
         self.save_interval = self.cfg["save_interval"]
 
@@ -169,7 +178,7 @@ class WMPRunner:
         # allow world model and rl env on different device
         if (self.wm_config.wm_device != 'None'):
             self.wm_config.device = self.wm_config.wm_device
-        self.wm_config.num_actions = self.wm_config.num_actions * self.env.cfg.depth.update_interval
+        self.wm_config.num_actions = self.env.num_actions * self.env.cfg.depth.update_interval
         prop_dim = self.env.num_obs - self.env.privileged_dim - self.env.height_dim - self.env.num_actions
         image_shape = self.env.cfg.depth.resized + (1,)
         obs_shape = {'prop': (prop_dim,), 'image': image_shape,}
@@ -189,11 +198,14 @@ class WMPRunner:
                                                              high=int(self.env.max_episode_length))
         obs = self.env.get_observations()
         privileged_obs = self.env.get_privileged_observations()
-        amp_obs = self.env.get_amp_observations()
+        amp_obs = self.env.get_amp_observations() if self.use_amp else None
         critic_obs = privileged_obs if privileged_obs is not None else obs
-        obs, critic_obs, amp_obs = obs.to(self.device), critic_obs.to(self.device), amp_obs.to(self.device)
+        obs, critic_obs = obs.to(self.device), critic_obs.to(self.device)
+        if self.use_amp:
+            amp_obs = amp_obs.to(self.device)
         self.alg.actor_critic.train()  # switch to train mode (for dropout for example)
-        self.alg.discriminator.train()
+        if self.use_amp:
+            self.alg.discriminator.train()
 
         ep_infos = []
         rewbuffer = deque(maxlen=100)
@@ -253,11 +265,13 @@ class WMPRunner:
                     actions = self.alg.act(obs, critic_obs, amp_obs, history, wm_feature.to(self.env.device))
                     obs, privileged_obs, rewards, dones, infos, reset_env_ids, terminal_amp_states = self.env.step(
                         actions)
-                    next_amp_obs = self.env.get_amp_observations()
+                    next_amp_obs = self.env.get_amp_observations() if self.use_amp else None
 
                     critic_obs = privileged_obs if privileged_obs is not None else obs
-                    obs, critic_obs, next_amp_obs, rewards, dones = obs.to(self.device), critic_obs.to(
-                        self.device), next_amp_obs.to(self.device), rewards.to(self.device), dones.to(self.device)
+                    obs, critic_obs, rewards, dones = obs.to(self.device), critic_obs.to(
+                        self.device), rewards.to(self.device), dones.to(self.device)
+                    if self.use_amp:
+                        next_amp_obs = next_amp_obs.to(self.device)
 
                     # update world model input
                     wm_action_history = torch.concat(
@@ -315,12 +329,13 @@ class WMPRunner:
                         wm_reward[:] = 0
 
                     # Account for terminal states.
-                    next_amp_obs_with_term = torch.clone(next_amp_obs)
-                    next_amp_obs_with_term[reset_env_ids] = terminal_amp_states
-
-                    rewards = self.alg.discriminator.predict_amp_reward(
-                        amp_obs, next_amp_obs_with_term, rewards, normalizer=self.alg.amp_normalizer)[0]
-                    amp_obs = torch.clone(next_amp_obs)
+                    next_amp_obs_with_term = None
+                    if self.use_amp:
+                        next_amp_obs_with_term = torch.clone(next_amp_obs)
+                        next_amp_obs_with_term[reset_env_ids] = terminal_amp_states
+                        rewards = self.alg.discriminator.predict_amp_reward(
+                            amp_obs, next_amp_obs_with_term, rewards, normalizer=self.alg.amp_normalizer)[0]
+                        amp_obs = torch.clone(next_amp_obs)
                     self.alg.process_env_step(rewards, dones, infos, next_amp_obs_with_term)
 
                     # process trajectory history
@@ -376,7 +391,8 @@ class WMPRunner:
 
             # copy the config file
             if(it == 0):
-                os.system("cp ./legged_gym/envs/a1/a1_amp_config.py " + self.log_dir + "/")
+                config_path = inspect.getfile(type(self.env.cfg))
+                shutil.copy2(config_path, self.log_dir)
 
         self.current_learning_iteration += num_learning_iterations
         self.save(os.path.join(self.log_dir, 'model_{}.pt'.format(self.current_learning_iteration)))
