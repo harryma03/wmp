@@ -36,9 +36,15 @@ Training takes about 23G GPU memory, and at least 10k iterations recommended.
 ## Visualization
 **Please make sure you have trained the WMP before**
 ```
-python legged_gym/scripts/play.py --task=a1_amp --sim_device=cuda:0 --terrain=climb
+python legged_gym/scripts/play.py --task=zg_m1_amp --sim_device=cuda:0 --terrain=climb
 ```
 
+## github
+cd /home/yons/harryma/WMP
+git status
+git add .
+git commit -m "Update ZG-M1"
+git push origin main
 
 ## Acknowledgments
 
