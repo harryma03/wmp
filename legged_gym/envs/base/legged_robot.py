@@ -56,6 +56,12 @@ from .legged_robot_config import LeggedRobotCfg
 from rsl_rl.datasets.motion_loader import AMPLoader
 import cv2
 
+try:
+    from rsl_rl.utils.warp_render_v3 import DepthRendererWarp, depth_image_preprocessing
+except ImportError:
+    DepthRendererWarp = None
+    depth_image_preprocessing = None
+
 COM_OFFSET = torch.tensor([0.012731, 0.002186, 0.000515])
 HIP_OFFSETS = torch.tensor([
     [0.183, 0.047, 0.],
@@ -225,6 +231,25 @@ class LeggedRobot(BaseTask):
 
         if self.global_counter % self.cfg.depth.update_interval != 0:
             return
+        if getattr(self.cfg.depth, "use_warp_renderer", False):
+            depth_env_ids = torch.as_tensor(self.depth_index, device=self.device, dtype=torch.long)
+            depth_images = self.depth_renderer.render_depth(
+                self.root_states[depth_env_ids, :3], self.root_states[depth_env_ids, 3:7]
+            )
+            depth_images = depth_image_preprocessing(
+                depth_images,
+                near_plane=self.cfg.depth.near_clip,
+                far_plane=self.cfg.depth.far_clip,
+            )
+            for i, env_id in enumerate(self.depth_index):
+                depth_image = self.process_depth_image(-depth_images[i], i)
+                if self.episode_length_buf[int(env_id)] <= 1:
+                    self.depth_buffer[i] = torch.stack([depth_image] * self.cfg.depth.buffer_len)
+                else:
+                    self.depth_buffer[i] = torch.cat(
+                        (self.depth_buffer[i, 1:], depth_image.unsqueeze(0)), dim=0
+                    )
+            return
         # self.gym.fetch_results(self.sim, True)
         self.gym.step_graphics(self.sim)  # required to render in headless mode
         self.gym.render_all_camera_sensors(self.sim)
@@ -311,9 +336,14 @@ class LeggedRobot(BaseTask):
         if self.viewer and self.enable_viewer_sync and self.debug_viz:
             # self._draw_debug_vis()
             if self.cfg.depth.use_camera:
+                camera_index = 0
+                if self.lookat_id < len(self.depth_index_inverse):
+                    mapped_index = int(self.depth_index_inverse[self.lookat_id])
+                    if mapped_index >= 0:
+                        camera_index = mapped_index
                 window_name = "Depth Image"
                 cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
-                cv2.imshow("Depth Image", self.depth_buffer[self.lookat_id, -1].cpu().numpy() + 0.5)
+                cv2.imshow("Depth Image", self.depth_buffer[camera_index, -1].cpu().numpy() + 0.5)
                 cv2.waitKey(1)
 
         return env_ids, terminal_amp_states
@@ -1154,6 +1184,31 @@ class LeggedRobot(BaseTask):
             self.gym.attach_camera_to_body(camera_handle, env_handle, root_handle, local_transform,
                                            gymapi.FOLLOW_TRANSFORM)
 
+    def _init_warp_depth_renderer(self):
+        if DepthRendererWarp is None or depth_image_preprocessing is None:
+            raise ImportError("Warp renderer requires the 'warp-lang' package")
+        if self.cfg.terrain.mesh_type != "trimesh":
+            raise ValueError("Warp renderer requires terrain.mesh_type='trimesh'")
+        camera_count = len(self.depth_index)
+        camera_position = torch.tensor(
+            self.cfg.depth.position, dtype=torch.float32, device=self.device
+        ).repeat(camera_count, 1)
+        camera_euler = torch.stack((
+            torch.empty(camera_count).uniform_(*self.cfg.depth.x_angle),
+            torch.empty(camera_count).uniform_(*self.cfg.depth.y_angle),
+            torch.empty(camera_count).uniform_(*self.cfg.depth.z_angle),
+        ), dim=1).deg2rad().to(self.device)
+        horizontal_fov = torch.full(
+            (camera_count,), self.cfg.depth.horizontal_fov,
+            dtype=torch.float32, device=self.device
+        )
+        self.depth_renderer = DepthRendererWarp(
+            self.cfg.depth.original, camera_position, camera_euler, horizontal_fov, self.device
+        )
+        terrain_vertices = np.array(self.terrain.vertices, copy=True)
+        terrain_vertices[:, :2] -= self.terrain.cfg.border_size
+        self.depth_renderer.render_mesh(terrain_vertices, self.terrain.triangles)
+
     def _create_envs(self):
         """ Creates environments:
              1. loads the robot URDF/MJCF asset,
@@ -1241,6 +1296,8 @@ class LeggedRobot(BaseTask):
             self.depth_index_inverse = -np.ones(self.num_envs, dtype=np.int)
             for i in range(len(self.depth_index)):
                 self.depth_index_inverse[self.depth_index[i]] = i
+            if getattr(self.cfg.depth, "use_warp_renderer", False):
+                self._init_warp_depth_renderer()
 
         for i in range(self.num_envs):
             # create env instance
@@ -1260,7 +1317,7 @@ class LeggedRobot(BaseTask):
             self.envs.append(env_handle)
             self.actor_handles.append(anymal_handle)
 
-            if(self.cfg.depth.use_camera and i in self.depth_index):
+            if(self.cfg.depth.use_camera and i in self.depth_index and not getattr(self.cfg.depth, "use_warp_renderer", False)):
                 self.attach_camera(i, env_handle, anymal_handle)
 
         self.feet_indices = torch.zeros(len(feet_names), dtype=torch.long, device=self.device, requires_grad=False)

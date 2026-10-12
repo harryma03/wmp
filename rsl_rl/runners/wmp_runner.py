@@ -174,7 +174,7 @@ class WMPRunner:
         for key, value in sorted(defaults.items(), key=lambda x: x[0]):
             arg_type = tools.args_type(value)
             parser.add_argument(f"--{key}", type=arg_type, default=arg_type(value))
-        self.wm_config = parser.parse_args()
+        self.wm_config, _ = parser.parse_known_args()
         # allow world model and rl env on different device
         if (self.wm_config.wm_device != 'None'):
             self.wm_config.device = self.wm_config.wm_device

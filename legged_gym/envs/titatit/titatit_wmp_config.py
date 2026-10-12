@@ -68,7 +68,7 @@ class TitatitWMPCfg(LeggedRobotCfg):
         }
 
     class sim(LeggedRobotCfg.sim):
-        dt = 0.002
+        dt = 0.005
         substeps = 1
 
         class physx(LeggedRobotCfg.sim.physx):
@@ -95,6 +95,7 @@ class TitatitWMPCfg(LeggedRobotCfg):
 
     class depth(LeggedRobotCfg.depth):
         use_camera = True
+        use_warp_renderer = True
         camera_num_envs = 1024
         camera_terrain_num_rows = 10
         camera_terrain_num_cols = 20
@@ -120,7 +121,7 @@ class TitatitWMPCfg(LeggedRobotCfg):
         terminate_after_contacts_on = ["base"]
         self_collisions = 0
         replace_cylinder_with_capsule = True
-        flip_visual_attachments = False
+        flip_visual_attachments = True
 
     class domain_rand(LeggedRobotCfg.domain_rand):
         randomize_friction = True

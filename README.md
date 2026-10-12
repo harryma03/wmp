@@ -43,7 +43,7 @@ python legged_gym/scripts/play.py --task=zg_m1_amp --sim_device=cuda:0 --terrain
 cd /home/yons/harryma/WMP
 git status
 git add .
-git commit -m "Update ZG-M1"
+git commit -m "Update titatit"
 git push origin main
 
 ## Acknowledgments

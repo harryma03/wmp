@@ -106,6 +106,7 @@ class ZGM1AMPCfg(LeggedRobotCfg):
 
     class depth(LeggedRobotCfg.depth):
         use_camera = True
+        use_warp_renderer = True
         camera_num_envs = 1024
         camera_terrain_num_rows = 10
         camera_terrain_num_cols = 20
@@ -135,7 +136,7 @@ class ZGM1AMPCfg(LeggedRobotCfg):
         foot_name = "FOOT_LINK"
         penalize_contacts_on = ["HIP_LINK", "KNEE_LINK"]
         terminate_after_contacts_on = ["BASE_LINK"]
-        self_collisions = 1
+        self_collisions = 0
 
     class domain_rand(LeggedRobotCfg.domain_rand):
         randomize_friction = True
