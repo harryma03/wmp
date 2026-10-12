@@ -127,6 +127,11 @@ class ZGM1AMPCfg(LeggedRobotCfg):
 
     class asset(LeggedRobotCfg.asset):
         file = "{LEGGED_GYM_ROOT_DIR}/resources/robots/zg_m1/urdf/zg_m1_urdf.urdf"
+        # The ZG-M1 URDF/STL files are already authored in a Z-up frame.
+        # Flipping visual attachments again makes the links look rotated and
+        # disconnected in Isaac Gym even though the joint frames are correct.
+        flip_visual_attachments = False
+        replace_cylinder_with_capsule = False
         foot_name = "FOOT_LINK"
         penalize_contacts_on = ["HIP_LINK", "KNEE_LINK"]
         terminate_after_contacts_on = ["BASE_LINK"]
@@ -178,6 +183,8 @@ class ZGM1AMPCfg(LeggedRobotCfg):
             tracking_ang_vel = 0.5
             torques = -0.0001
             dof_acc = -2.5e-7
+            dof_error = -0.04
+            dof_pos_limits = -10.0
             collision = -1.0
             action_rate = -0.03
             lin_vel_z = -1.0
@@ -233,8 +240,8 @@ class ZGM1AMPCfgPPO(LeggedRobotCfgPPO):
         num_mini_batches = 4
 
     class runner(LeggedRobotCfgPPO.runner):
-        run_name = "WMP"
-        experiment_name = "zg_m1_wmp"
+        run_name = "WMP1019"
+        experiment_name = "zg_m1_wmp_1019"
         algorithm_class_name = "AMPPPO"
         use_amp = False
         policy_class_name = "ActorCritic"

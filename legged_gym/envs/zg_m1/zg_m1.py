@@ -85,3 +85,13 @@ class ZGM1(LeggedRobot):
         wheel_rate = torch.sum(torch.square(action_delta[:, self.wheel_dof_indices]), dim=1)
         return leg_rate + 0.1 * wheel_rate
 
+    def _reward_dof_error(self):
+        """Keep the 12 leg joints near the nominal pose without penalizing wheel rotation."""
+        return torch.sum(
+            torch.square(
+                self.dof_pos[:, self.leg_dof_indices]
+                - self.default_dof_pos[:, self.leg_dof_indices]
+            ),
+            dim=1,
+        )
+

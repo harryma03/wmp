@@ -144,7 +144,15 @@ def play(args):
                                         obs[:, env.privileged_dim + 9:-env.height_dim]), dim=1)
     trajectory_history = torch.concat((trajectory_history[:, 1:], obs_without_command.unsqueeze(1)), dim=1)
 
-    world_model = ppo_runner._world_model.to(env.device)
+    # nn.Module.to() moves parameters, but WorldModel.device is a plain
+    # attribute and otherwise keeps the device from dreamer/config.yaml.
+    # Keep the model's allocations on the same GPU selected for playback.
+    wm_device = torch.device(env.device)
+    world_model = ppo_runner._world_model.to(wm_device)
+    world_model.device = wm_device
+    for module in world_model.modules():
+        if hasattr(module, "_device"):
+            module._device = wm_device
     wm_latent = wm_action = None
     wm_is_first = torch.ones(env.num_envs, device=env.device)
     wm_update_interval = env.cfg.depth.update_interval
