@@ -12,7 +12,7 @@ class TitatitWMPCfg(LeggedRobotCfg):
         include_history_steps = None
         prop_dim = 41
         action_dim = 16
-        privileged_dim = 29
+        privileged_dim = 29  # Includes the additional base contact flag.
         height_dim = 187
         forward_height_dim = 525
         num_actions = 16
@@ -91,7 +91,7 @@ class TitatitWMPCfg(LeggedRobotCfg):
         leg_action_scale = 0.25
         wheel_action_scale = 5.0
         action_scale = 0.25
-        decimation = 10
+        decimation = 4
 
     class depth(LeggedRobotCfg.depth):
         use_camera = True
