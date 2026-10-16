@@ -39,6 +39,21 @@ Training takes about 23G GPU memory, and at least 10k iterations recommended.
 python legged_gym/scripts/play.py --task=zg_m1_amp --sim_device=cuda:0 --terrain=climb
 ```
 
+For Titatit, `python legged_gym/scripts/play.py --task=titatit --sim_device=cuda:0 --terrain=climb`
+also exports `logs/titatit_wmp/exported/policies/policy.onnx` and
+`world_model.onnx`. Install `onnx` in the training environment first.
+
+`world_model.onnx` runs once per depth update (every 5 control steps by default).
+Inputs are `prop [B,41]`, `image [B,64,64,1]`, `prev_stoch [B,32,32]`,
+`prev_deter [B,512]`, `action_history [B,80]`, and `is_first [B]` (1 on
+episode reset, otherwise 0). Feed `next_stoch` and `wm_feature` back as
+`prev_stoch` and `prev_deter` on the next update. The exported RSSM uses the
+most likely latent category for deterministic deployment; this differs from
+the sampled latent used in Python playback. `policy.onnx` takes
+`observation [B,273]`, `history [B,270]`, and the latest `wm_feature [B,512]`,
+and returns `action [B,16]`. Maintain the observation, history, and action
+history preprocessing used in `play.py` when running the models externally.
+
 ## github
 cd /home/yons/harryma/WMP
 git status

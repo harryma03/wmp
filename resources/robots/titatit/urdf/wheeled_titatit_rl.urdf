@@ -187,9 +187,9 @@
   </joint>
   <link name="FR_foot">
     <visual>
-      <origin rpy="1.5708 0 0" xyz="0 -0.04 0"/>
+      <origin rpy="0 0 0" xyz="0 -0.04 0"/>
       <geometry>
-        <cylinder radius="0.0948" length="0.02"/>
+        <mesh filename="../meshes/FR_foot.STL"/>
       </geometry>
       <material name="orange"/>
     </visual>
@@ -323,9 +323,9 @@
   </joint>
   <link name="FL_foot">
     <visual>
-      <origin rpy="1.5708 0 0" xyz="0 0.04 0"/>
+      <origin rpy="0 0 0" xyz="0 0.04 0"/>
       <geometry>
-        <cylinder radius="0.0948" length="0.02"/>
+        <mesh filename="../meshes/FL_foot.STL"/>
       </geometry>
       <material name="orange"/>
     </visual>
@@ -468,9 +468,9 @@
   </joint>
   <link name="RR_foot">
     <visual>
-      <origin rpy="1.5708 0 0" xyz="0 -0.04 0"/>
+      <origin rpy="0 0 0" xyz="0 -0.04 0"/>
       <geometry>
-        <cylinder radius="0.0948" length="0.02"/>
+        <mesh filename="../meshes/RR_foot.STL"/>
       </geometry>
       <material name="orange"/>
     </visual>
@@ -614,9 +614,9 @@
   </joint>
   <link name="RL_foot">
     <visual>
-      <origin rpy="1.5708 0 0" xyz="0 0.04 0"/>
+      <origin rpy="0 0 0" xyz="0 0.04 0"/>
       <geometry>
-        <cylinder radius="0.0948" length="0.02"/>
+        <mesh filename="../meshes/RL_foot.STL"/>
       </geometry>
       <material name="orange"/>
     </visual>

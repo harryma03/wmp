@@ -42,7 +42,8 @@ from legged_gym import LEGGED_GYM_ROOT_DIR
 
 import isaacgym
 from legged_gym.envs import *
-from legged_gym.utils import  get_args, export_policy_as_jit, task_registry, Logger
+from legged_gym.utils import get_args, task_registry, Logger
+from legged_gym.utils.wmp_onnx import export_wmp_as_onnx
 
 import numpy as np
 import torch
@@ -121,11 +122,19 @@ def play(args):
     ppo_runner, train_cfg = task_registry.make_wmp_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
     policy = ppo_runner.get_inference_policy(device=env.device)
     
-    # export policy as a jit module (used to run it from C++)
+    # Export the complete actor and one world-model update for deployment.
     if EXPORT_POLICY:
         path = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', 'policies')
-        export_policy_as_jit(ppo_runner.alg.actor_critic, path)
-        print('Exported policy as jit script to: ', path)
+        export_wmp_as_onnx(
+            ppo_runner.alg.actor_critic, ppo_runner._world_model, path,
+            obs_dim=env.num_obs,
+            history_dim=ppo_runner.alg.actor_critic.history_encoder[0].in_features,
+            prop_dim=env.cfg.env.prop_dim,
+            image_shape=env.cfg.depth.resized + (1,),
+            action_dim=env.num_actions,
+            action_interval=env.cfg.depth.update_interval,
+        )
+        print('Exported policy.onnx and world_model.onnx to:', path)
 
     logger = Logger(env.dt)
     robot_index = 0 # which robot is used for logging
