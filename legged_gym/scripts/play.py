@@ -34,6 +34,7 @@
 import os
 import inspect
 import time
+import json
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(os.path.dirname(currentdir))
@@ -53,9 +54,25 @@ def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
     # override some parameters for testing
     env_cfg.env.num_envs = min(env_cfg.env.num_envs, 10)
+    if os.getenv("WMP_SMALL_PHYSX") == "1":
+        # Single-environment diagnostics do not need training-sized pools.
+        env_cfg.sim.physx.max_gpu_contact_pairs = 2 ** 18
+        env_cfg.sim.physx.default_buffer_size_multiplier = 1
     env_cfg.terrain.num_cols = 1
     env_cfg.terrain.curriculum = False
     env_cfg.noise.add_noise = False
+    # Keep evaluation depth clean for comparison with deployment.
+    env_cfg.depth.dis_noise = 0.0
+    env_cfg.depth.pixel_noise = 0.0
+    gap_ab_mode = os.getenv('WMP_GAP_AB', '')
+    if gap_ab_mode:
+        if gap_ab_mode not in ('isolated', 'flat') or args.terrain != 'gap':
+            raise ValueError('WMP_GAP_AB must be isolated or flat with --terrain=gap')
+        env_cfg.terrain.gap_ab_mode = gap_ab_mode
+        env_cfg.seed = args.seed if args.seed is not None else 1
+        env_cfg.depth.y_angle = [0, 0]
+        env_cfg.depth.x_angle = [0, 0]
+        env_cfg.depth.z_angle = [0, 0]
     # env_cfg.domain_rand.randomize_friction = False
     # env_cfg.domain_rand.randomize_restitution = False
     # env_cfg.commands.heading_command = True
@@ -178,6 +195,8 @@ def play(args):
 
     wm_feature = torch.zeros((env.num_envs, ppo_runner.wm_feature_dim), device=env.device)
 
+    trace_path = os.getenv("WMP_PLAY_TRACE_PATH")
+    trace_file = open(trace_path, "w") if trace_path else None
     total_reward = 0
     not_dones = torch.ones((env.num_envs,), device=env.device)
     for i in range(1*int(env.max_episode_length) + 3):
@@ -186,12 +205,26 @@ def play(args):
                 wm_obs["image"][env.depth_index] = infos["depth"].unsqueeze(-1).to(world_model.device)
 
             wm_embed = world_model.encoder(wm_obs)
-            wm_latent, _ = world_model.dynamics.obs_step(wm_latent, wm_action, wm_embed, wm_obs["is_first"], sample=True)
+            # Deployment ONNX uses the posterior mode (argmax) so playback
+            # must use the same deterministic RSSM update for sim2sim parity.
+            wm_latent, _ = world_model.dynamics.obs_step(
+                wm_latent, wm_action, wm_embed, wm_obs["is_first"], sample=False
+            )
             wm_feature = world_model.dynamics.get_deter_feat(wm_latent)
             wm_is_first[:] = 0
 
         history = trajectory_history.flatten(1).to(env.device)
         actions = policy(obs.detach(), history.detach(), wm_feature.detach())
+        if trace_file:
+            trace_file.write(json.dumps({"step": i, "root": env.root_states[0].detach().cpu().tolist(),
+                "observation": obs[0].detach().cpu().tolist(),
+                "history": history[0].detach().cpu().tolist(),
+                "feature": wm_feature[0].detach().cpu().tolist(),
+                "action": actions[0].detach().cpu().tolist()}) + "\n")
+            trace_file.flush()
+            if i >= 600:
+                trace_file.close()
+                break
 
 
         obs, _, rews, dones, infos, reset_env_ids, _ = env.step(actions.detach())
@@ -232,8 +265,8 @@ def play(args):
                 filename = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', 'frames', f"{img_idx}.png")
                 env.gym.write_viewer_image_to_file(env.viewer, filename)
                 img_idx += 1 
-        if MOVE_CAMERA:
-            lootat = env.root_states[8, :3]
+        if MOVE_CAMERA and not args.headless:
+            lootat = env.root_states[min(8, env.num_envs - 1), :3]
             camara_position = lootat.detach().cpu().numpy() + [0, 1, 0]
             env.set_camera(camara_position, lootat)
 
@@ -265,7 +298,7 @@ def play(args):
     print('total reward:', total_reward)
 
 if __name__ == '__main__':
-    EXPORT_POLICY = True
+    EXPORT_POLICY = os.getenv("WMP_SKIP_EXPORT") != "1"
     RECORD_FRAMES = False
     MOVE_CAMERA = True
     args = get_args()

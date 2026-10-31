@@ -6,3 +6,5 @@ logs/
 
 .idea/
 .vscode/
+
+symlink_install_manifest.txt

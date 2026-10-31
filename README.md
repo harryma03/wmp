@@ -29,14 +29,14 @@ python -c "import isaacgym; import torch; import cv2; import ruamel.yaml; import
 
 ## Training
 ```
-python legged_gym/scripts/train.py --task=a1_amp --headless --sim_device=cuda:0
+python legged_gym/scripts/train.py --task=titatit --headless --sim_device=cuda:0
 ```
 Training takes about 23G GPU memory, and at least 10k iterations recommended.
 
 ## Visualization
 **Please make sure you have trained the WMP before**
 ```
-python legged_gym/scripts/play.py --task=zg_m1_amp --sim_device=cuda:0 --terrain=climb
+python legged_gym/scripts/play.py --task=titatit --sim_device=cuda:0 --terrain=climb
 ```
 
 For Titatit, `python legged_gym/scripts/play.py --task=titatit --sim_device=cuda:0 --terrain=climb`

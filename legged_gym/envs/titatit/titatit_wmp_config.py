@@ -110,7 +110,8 @@ class TitatitWMPCfg(LeggedRobotCfg):
         buffer_len = 2
         near_clip = 0
         far_clip = 2
-        dis_noise = 0.0
+        dis_noise = 0.01  # Per-frame depth bias, uniform +/- 1 cm.
+        pixel_noise = 0.01  # Independent pixel noise, uniform +/- 1 cm.
         scale = 1
         invert = True
 

@@ -174,7 +174,10 @@ class Terrain:
             terrain_utils.random_uniform_terrain(terrain, min_height=-0.05, max_height=0.05, step=0.005,
                                                  downsampled_scale=0.2)
         elif choice < self.proportions[5]:
-            gap_terrain(terrain, gap_size=gap_size, platform_size=4.)
+            ab_mode = getattr(self.cfg, 'gap_ab_mode', '')
+            gap_terrain(terrain, gap_size=0.2 if ab_mode else gap_size, platform_size=4.,
+                        fixed_width=1.6 if ab_mode else None,
+                        side_floor=ab_mode == 'flat')
             terrain_utils.random_uniform_terrain(terrain, min_height=-0.05, max_height=0.05, step=0.005,
                                                  downsampled_scale=0.2)
         elif choice < self.proportions[6]:
@@ -337,7 +340,7 @@ class Terrain:
         self.env_origins[i, j] = [env_origin_x, env_origin_y, env_origin_z]
 
 
-def gap_terrain(terrain, gap_size, platform_size=1.):
+def gap_terrain(terrain, gap_size, platform_size=1., fixed_width=None, side_floor=False):
     gap_size = int(gap_size / terrain.horizontal_scale)
     platform_size = int(platform_size / terrain.horizontal_scale)
 
@@ -348,6 +351,8 @@ def gap_terrain(terrain, gap_size, platform_size=1.):
     x3 = x1 - gap_size
     x4 = x2 + gap_size
     width = 1 + 1.0 * np.random.random()
+    if fixed_width is not None:
+        width = fixed_width
     half_width = width / 2
     y1 = int(center_y - half_width / terrain.horizontal_scale)
     y2 = int(center_y + half_width / terrain.horizontal_scale)
@@ -357,6 +362,9 @@ def gap_terrain(terrain, gap_size, platform_size=1.):
     terrain.height_field_raw[x5:x3, y1: y2] = 0
     terrain.height_field_raw[x1: x2, y1: y2] = 0
     terrain.height_field_raw[x4:, y1: y2] = 0
+    if side_floor:
+        terrain.height_field_raw[:, :y1] = 0
+        terrain.height_field_raw[:, y2:] = 0
 
 def climb_terrain(terrain, depth, platform_size=1.):
     depth = int(depth / terrain.vertical_scale)
