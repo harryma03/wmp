@@ -1,0 +1,205 @@
+{
+  "results": [
+    {
+      "model": "new",
+      "mode": "flat",
+      "seed": 1,
+      "pass_previous_criterion": true,
+      "direct_pass": true,
+      "approach_max_lateral": 0.09831833839416504,
+      "first_reset_step": null,
+      "max_x": 12.252203941345215
+    },
+    {
+      "model": "new",
+      "mode": "flat",
+      "seed": 2,
+      "pass_previous_criterion": true,
+      "direct_pass": true,
+      "approach_max_lateral": 0.08389711380004883,
+      "first_reset_step": null,
+      "max_x": 11.848786354064941
+    },
+    {
+      "model": "new",
+      "mode": "flat",
+      "seed": 3,
+      "pass_previous_criterion": true,
+      "direct_pass": true,
+      "approach_max_lateral": 0.32094502449035645,
+      "first_reset_step": null,
+      "max_x": 11.714710235595703
+    },
+    {
+      "model": "new",
+      "mode": "flat",
+      "seed": 4,
+      "pass_previous_criterion": true,
+      "direct_pass": true,
+      "approach_max_lateral": 0.07544398307800293,
+      "first_reset_step": null,
+      "max_x": 12.435270309448242
+    },
+    {
+      "model": "new",
+      "mode": "flat",
+      "seed": 5,
+      "pass_previous_criterion": true,
+      "direct_pass": true,
+      "approach_max_lateral": 0.2492990493774414,
+      "first_reset_step": null,
+      "max_x": 10.407732963562012
+    },
+    {
+      "model": "new",
+      "mode": "isolated",
+      "seed": 1,
+      "pass_previous_criterion": true,
+      "direct_pass": true,
+      "approach_max_lateral": 0.07979798316955566,
+      "first_reset_step": null,
+      "max_x": 12.245689392089844
+    },
+    {
+      "model": "new",
+      "mode": "isolated",
+      "seed": 2,
+      "pass_previous_criterion": true,
+      "direct_pass": true,
+      "approach_max_lateral": 0.09313344955444336,
+      "first_reset_step": null,
+      "max_x": 11.77376937866211
+    },
+    {
+      "model": "new",
+      "mode": "isolated",
+      "seed": 3,
+      "pass_previous_criterion": true,
+      "direct_pass": true,
+      "approach_max_lateral": 0.2687547206878662,
+      "first_reset_step": null,
+      "max_x": 11.713122367858887
+    },
+    {
+      "model": "new",
+      "mode": "isolated",
+      "seed": 4,
+      "pass_previous_criterion": true,
+      "direct_pass": true,
+      "approach_max_lateral": 0.0501558780670166,
+      "first_reset_step": null,
+      "max_x": 12.53043270111084
+    },
+    {
+      "model": "new",
+      "mode": "isolated",
+      "seed": 5,
+      "pass_previous_criterion": true,
+      "direct_pass": true,
+      "approach_max_lateral": 0.23523616790771484,
+      "first_reset_step": null,
+      "max_x": 10.403757095336914
+    },
+    {
+      "model": "old",
+      "mode": "flat",
+      "seed": 1,
+      "pass_previous_criterion": false,
+      "direct_pass": false,
+      "approach_max_lateral": null,
+      "first_reset_step": 145,
+      "max_x": 5.836047649383545
+    },
+    {
+      "model": "old",
+      "mode": "flat",
+      "seed": 2,
+      "pass_previous_criterion": false,
+      "direct_pass": false,
+      "approach_max_lateral": null,
+      "first_reset_step": 252,
+      "max_x": 6.303590297698975
+    },
+    {
+      "model": "old",
+      "mode": "flat",
+      "seed": 3,
+      "pass_previous_criterion": false,
+      "direct_pass": false,
+      "approach_max_lateral": null,
+      "first_reset_step": 208,
+      "max_x": 5.897287845611572
+    },
+    {
+      "model": "old",
+      "mode": "flat",
+      "seed": 4,
+      "pass_previous_criterion": false,
+      "direct_pass": false,
+      "approach_max_lateral": null,
+      "first_reset_step": 124,
+      "max_x": 5.889069080352783
+    },
+    {
+      "model": "old",
+      "mode": "flat",
+      "seed": 5,
+      "pass_previous_criterion": false,
+      "direct_pass": false,
+      "approach_max_lateral": null,
+      "first_reset_step": 24,
+      "max_x": 3.145758867263794
+    },
+    {
+      "model": "old",
+      "mode": "isolated",
+      "seed": 1,
+      "pass_previous_criterion": true,
+      "direct_pass": true,
+      "approach_max_lateral": 0.04774188995361328,
+      "first_reset_step": null,
+      "max_x": 12.682119369506836
+    },
+    {
+      "model": "old",
+      "mode": "isolated",
+      "seed": 2,
+      "pass_previous_criterion": true,
+      "direct_pass": true,
+      "approach_max_lateral": 0.1029353141784668,
+      "first_reset_step": null,
+      "max_x": 12.185210227966309
+    },
+    {
+      "model": "old",
+      "mode": "isolated",
+      "seed": 3,
+      "pass_previous_criterion": true,
+      "direct_pass": true,
+      "approach_max_lateral": 0.20511341094970703,
+      "first_reset_step": null,
+      "max_x": 11.876821517944336
+    },
+    {
+      "model": "old",
+      "mode": "isolated",
+      "seed": 4,
+      "pass_previous_criterion": true,
+      "direct_pass": true,
+      "approach_max_lateral": 0.0314021110534668,
+      "first_reset_step": null,
+      "max_x": 12.81765079498291
+    },
+    {
+      "model": "old",
+      "mode": "isolated",
+      "seed": 5,
+      "pass_previous_criterion": false,
+      "direct_pass": false,
+      "approach_max_lateral": null,
+      "first_reset_step": 24,
+      "max_x": 3.1457574367523193
+    }
+  ],
+  "paired_initial_max_difference": 0.0
+}

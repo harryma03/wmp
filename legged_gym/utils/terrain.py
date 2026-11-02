@@ -174,6 +174,9 @@ class Terrain:
             terrain_utils.random_uniform_terrain(terrain, min_height=-0.05, max_height=0.05, step=0.005,
                                                  downsampled_scale=0.2)
         elif choice < self.proportions[5]:
+            if getattr(self.cfg, 'generalize_gap', False):
+                generalized_gap_terrain(terrain, difficulty, j)
+                return terrain
             ab_mode = getattr(self.cfg, 'gap_ab_mode', '')
             gap_terrain(terrain, gap_size=0.2 if ab_mode else gap_size, platform_size=4.,
                         fixed_width=1.6 if ab_mode else None,
@@ -365,6 +368,42 @@ def gap_terrain(terrain, gap_size, platform_size=1., fixed_width=None, side_floo
     if side_floor:
         terrain.height_field_raw[:, :y1] = 0
         terrain.height_field_raw[:, y2:] = 0
+
+def generalized_gap_terrain(terrain, difficulty, column):
+    """Mixed visual surroundings with an unbroken trench across the tile.
+
+    Five gap columns repeat isolated, isolated, flat, flat, one-sided.
+    Full-width cuts prevent bypassing the gap on its adjacent floor.
+    """
+    hs, vs = terrain.horizontal_scale, terrain.vertical_scale
+    mode = column % 5
+    depth = np.random.choice([0.5, 1., 2., 5.])
+    pit = -round(depth / vs)
+    terrain.height_field_raw[:] = pit
+    width = np.random.uniform(1.2, 2.)
+    half = round(width / hs / 2)
+    center = terrain.width // 2
+    terrain.height_field_raw[:, center-half:center+half] = 0
+    if mode in (2, 3):
+        terrain.height_field_raw[:] = 0
+    elif mode == 4:
+        if np.random.random() < .5:
+            terrain.height_field_raw[:, :center] = 0
+        else:
+            terrain.height_field_raw[:, center:] = 0
+    # Initial curriculum: 20 cm; upper levels reach 40 cm, in grid cells.
+    gap_cells = round((.2 + .2 * difficulty) / hs)
+    front = round(np.random.uniform(5.6, 6.3) / hs)
+    rear = round(np.random.uniform(2., 2.6) / hs)
+    for start in (rear, front):
+        terrain.height_field_raw[start:start+gap_cells, :] = pit
+    # Keep both smooth and gently rough variants, without roughening pit walls.
+    if np.random.random() < .5:
+        floor = terrain.height_field_raw == 0
+        terrain_utils.random_uniform_terrain(terrain, min_height=-.02,
+            max_height=.02, step=.005, downsampled_scale=.2)
+        terrain.height_field_raw[~floor] = pit
+
 
 def climb_terrain(terrain, depth, platform_size=1.):
     depth = int(depth / terrain.vertical_scale)

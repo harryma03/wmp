@@ -198,6 +198,7 @@ def play(args):
     trace_path = os.getenv("WMP_PLAY_TRACE_PATH")
     trace_file = open(trace_path, "w") if trace_path else None
     total_reward = 0
+    trace_episode = 0
     not_dones = torch.ones((env.num_envs,), device=env.device)
     for i in range(1*int(env.max_episode_length) + 3):
         if (env.global_counter % wm_update_interval == 0):
@@ -216,7 +217,7 @@ def play(args):
         history = trajectory_history.flatten(1).to(env.device)
         actions = policy(obs.detach(), history.detach(), wm_feature.detach())
         if trace_file:
-            trace_file.write(json.dumps({"step": i, "root": env.root_states[0].detach().cpu().tolist(),
+            trace_file.write(json.dumps({"step": i, "episode": trace_episode, "root": env.root_states[0].detach().cpu().tolist(),
                 "observation": obs[0].detach().cpu().tolist(),
                 "history": history[0].detach().cpu().tolist(),
                 "feature": wm_feature[0].detach().cpu().tolist(),
@@ -228,6 +229,8 @@ def play(args):
 
 
         obs, _, rews, dones, infos, reset_env_ids, _ = env.step(actions.detach())
+        if trace_file and bool(dones[0]):
+            trace_episode += 1
 
         not_dones *= (~dones)
         total_reward += torch.mean(rews * not_dones)
